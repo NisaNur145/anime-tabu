@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>Anime Tabu</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- 0. GİRİŞ EKRANI (logo + oyun adı) -->
+    <div id="splash-screen" class="screen splash">
+        <!-- Logoyu assets/images/logo.png olarak koy. Dosya yoksa görsel otomatik gizlenir. -->
+        <img class="logo logo-large" src="assets/images/logo.png" alt="Kulüp Logosu" onerror="this.style.display='none'">
+        <h1 class="splash-title">Anime Tabu</h1>
+        <p class="splash-sub">Anime &amp; Manga Tabu Oyunu</p>
+        <button id="btn-splash-start">Başla</button>
+    </div>
+
+    <!-- 1. ANA MENÜ EKRANI -->
+    <div id="main-menu" class="screen" style="display: none;">
+        <img class="logo logo-small" src="assets/images/logo.png" alt="Kulüp Logosu" onerror="this.style.display='none'">
+        <h1>Anime Tabu</h1>
+        <button id="btn-play">Oyna</button>
+        <button id="btn-add-card">Kart Ekle</button>
+        <button id="btn-pool">Havuzu Görüntüle</button>
+        <button id="btn-leaderboard">Liderlik Tablosu</button>
+        <button id="btn-settings">Ayarlar</button>
+        <button id="btn-admin" class="btn-exit">Yönetici Girişi</button>
+    </div>
+
+    <!-- 2. TAKIM KURULUM EKRANI -->
+    <div id="team-setup-screen" class="screen" style="display: none;">
+        <h2>Takımları Belirle</h2>
+
+        <p class="field-label">Takım sayısı:</p>
+        <div id="team-count-picker" class="count-picker">
+            <button type="button" class="count-btn" data-count="2">2</button>
+            <button type="button" class="count-btn" data-count="3">3</button>
+            <button type="button" class="count-btn" data-count="4">4</button>
+            <button type="button" class="count-btn" data-count="5">5</button>
+        </div>
+
+        <div id="team-inputs">
+            <input type="text" class="team-name-input" placeholder="1. Takım İsmi (örn: Akatsuki)" maxlength="25">
+            <input type="text" class="team-name-input" placeholder="2. Takım İsmi (örn: Gotei 13)" maxlength="25">
+            <input type="text" class="team-name-input" placeholder="3. Takım İsmi" maxlength="25">
+            <input type="text" class="team-name-input" placeholder="4. Takım İsmi" maxlength="25">
+            <input type="text" class="team-name-input" placeholder="5. Takım İsmi" maxlength="25">
+        </div>
+
+        <!-- Daha önce kullanılan takımlar (dokununca boş kutuya yazılır) -->
+        <div id="saved-teams-wrap" class="saved-teams-wrap" style="display: none;">
+            <p class="field-label">Kayıtlı takımlar:</p>
+            <div id="saved-teams"></div>
+        </div>
+
+        <label for="game-category" class="field-label">Kategori:</label>
+        <select id="game-category">
+            <option value="">Tüm Kategoriler</option>
+        </select>
+
+        <label class="check-row">
+            <input type="checkbox" id="save-to-leaderboard" checked>
+            <span>Sonucu liderlik tablosuna kaydet</span>
+        </label>
+
+        <button id="btn-start-game">Oyunu Başlat</button>
+        <button class="btn-back">Geri</button>
+    </div>
+
+    <!-- 3. KART EKLEME EKRANI -->
+    <div id="add-card-screen" class="screen" style="display: none;">
+        <h2>Yeni Kart Ekle</h2>
+        <input type="text" id="input-main-word" placeholder="Anlatılacak Kelime (Ana Kelime)" maxlength="40">
+        <input type="text" id="input-category" list="category-list" placeholder="Kategori (örn: Naruto) - boşsa Genel" maxlength="30">
+        <div class="forbidden-inputs">
+            <input type="text" class="input-forbidden" placeholder="Yasaklı Kelime 1" maxlength="40">
+            <input type="text" class="input-forbidden" placeholder="Yasaklı Kelime 2" maxlength="40">
+            <input type="text" class="input-forbidden" placeholder="Yasaklı Kelime 3" maxlength="40">
+            <input type="text" class="input-forbidden" placeholder="Yasaklı Kelime 4" maxlength="40">
+            <input type="text" class="input-forbidden" placeholder="Yasaklı Kelime 5" maxlength="40">
+        </div>
+        <button id="btn-save-card">Kaydet</button>
+        <button class="btn-back">Geri</button>
+    </div>
+
+    <!-- Kategori önerileri (kart ekle ve düzenle ekranları ortak kullanır; JS doldurur) -->
+    <datalist id="category-list"></datalist>
+
+    <!-- KARTI DÜZENLE EKRANI -->
+    <div id="edit-card-screen" class="screen" style="display: none;">
+        <h2>Kartı Düzenle</h2>
+        <input type="text" id="edit-main-word" placeholder="Anlatılacak Kelime (Ana Kelime)" maxlength="40">
+        <input type="text" id="edit-category" list="category-list" placeholder="Kategori (örn: Naruto) - boşsa Genel" maxlength="30">
+        <div class="forbidden-inputs">
+            <input type="text" class="edit-forbidden" placeholder="Yasaklı Kelime 1" maxlength="40">
+            <input type="text" class="edit-forbidden" placeholder="Yasaklı Kelime 2" maxlength="40">
+            <input type="text" class="edit-forbidden" placeholder="Yasaklı Kelime 3" maxlength="40">
+            <input type="text" class="edit-forbidden" placeholder="Yasaklı Kelime 4" maxlength="40">
+            <input type="text" class="edit-forbidden" placeholder="Yasaklı Kelime 5" maxlength="40">
+        </div>
+        <button id="btn-update-card">Değişiklikleri Kaydet</button>
+        <!-- Havuza döner (ui.js bağlar); btn-back sınıfı ana menüye götürdüğü için kullanılmadı -->
+        <button id="btn-edit-back" class="btn-edit-back">Geri</button>
+    </div>
+
+    <!-- 4. HAVUZ EKRANI -->
+    <div id="pool-screen" class="screen" style="display: none;">
+        <h2>Kart Havuzu</h2>
+        <input type="text" id="pool-search" placeholder="Ara: kelime, yasaklı kelime veya kategori">
+        <p id="pool-count" class="pool-count">Toplam 0 kart</p>
+        <p id="pool-admin-note" class="pool-count">Kartları düzenlemek veya silmek için ana menüden yönetici girişi yap.</p>
+        <div id="card-list">
+            <!-- Kartlar JS ile buraya eklenecek -->
+        </div>
+        <button class="btn-back">Geri</button>
+    </div>
+
+    <!-- 4.5 LİDERLİK TABLOSU -->
+    <div id="leaderboard-screen" class="screen" style="display: none;">
+        <h2>Liderlik Tablosu</h2>
+        <p id="leaderboard-note" class="pool-count">Yükleniyor...</p>
+        <div id="leaderboard-list">
+            <!-- Sıralama JS ile buraya eklenecek -->
+        </div>
+        <button id="btn-leaderboard-reset" class="btn-danger" style="display: none;">Tabloyu Sıfırla (Yönetici)</button>
+        <button class="btn-back">Geri</button>
+    </div>
+
+    <!-- 5. AYARLAR EKRANI -->
+    <div id="settings-screen" class="screen" style="display: none;">
+        <h2>Ayarlar</h2>
+        <div class="setting-item">
+            <label for="target-score">Hedef Puan:</label>
+            <input type="number" id="target-score" value="50" min="1" inputmode="numeric">
+        </div>
+        <div class="setting-item">
+            <label for="turn-duration">Tur Süresi (Sn):</label>
+            <input type="number" id="turn-duration" value="60" min="1" inputmode="numeric">
+        </div>
+        <div class="setting-item">
+            <label for="pass-limit">Tur Başına Pas Hakkı (0 = sınırsız):</label>
+            <input type="number" id="pass-limit" value="3" min="0" inputmode="numeric">
+        </div>
+        <label class="check-row">
+            <input type="checkbox" id="vibration-enabled" checked>
+            <span>Titreşim (destekleyen telefonlarda)</span>
+        </label>
+        <label class="check-row">
+            <input type="checkbox" id="sound-enabled" checked>
+            <span>Ses efektleri (doğru, tabu, pas, süre)</span>
+        </label>
+        <label class="check-row">
+            <input type="checkbox" id="music-enabled" checked>
+            <span>Müzik (menü ve kazanma)</span>
+        </label>
+        <div class="setting-item">
+            <label for="volume-level">Ses seviyesi: <span id="volume-value">70</span></label>
+            <input type="range" id="volume-level" min="0" max="100" step="5" value="70">
+        </div>
+        <button id="btn-test-sound" class="btn-exit">Sesi Dene</button>
+        <button id="btn-credits" class="btn-exit">Müzik ve Ses Kaynakları</button>
+        <button id="btn-save-settings">Ayarları Kaydet</button>
+        <button id="btn-clear-teams" class="btn-exit">Kayıtlı Takımları Temizle</button>
+        <button class="btn-back">Geri</button>
+    </div>
+
+    <!-- 5.3 MÜZİK VE SES KAYNAKLARI (lisans gereği yapımcı adları burada görünür) -->
+    <div id="credits-screen" class="screen" style="display: none;">
+        <h2>Müzik ve Ses Kaynakları</h2>
+        <p class="ready-hint">Ses efektleri oyun içinde kodla üretilmiştir, dış kaynak kullanılmamıştır.</p>
+        <div id="credits-list"></div>
+        <button id="btn-credits-back" class="btn-exit">Geri</button>
+    </div>
+
+    <!-- 5.4 YÖNETİCİ GİRİŞ EKRANI (kart düzenleme ve silme yetkisi için) -->
+    <div id="admin-login-screen" class="screen" style="display: none;">
+        <h2>Yönetici Girişi</h2>
+        <p class="ready-hint">Kartları düzenlemek ve silmek sadece yöneticiye açıktır. Kart eklemek için giriş gerekmez.</p>
+        <input type="password" id="admin-password" placeholder="Yönetici şifresi" autocomplete="current-password">
+        <button id="btn-admin-login">Giriş Yap</button>
+        <button class="btn-back">Geri</button>
+    </div>
+
+    <!-- 5.5 HAZIR MISINIZ? EKRANI (Her turun başında; kart henüz gösterilmez) -->
+    <div id="ready-screen" class="screen" style="display: none;">
+        <p id="ready-message" class="ready-message">Oyun başlıyor!</p>
+        <h2>Hazır mısınız?</h2>
+        <h1 id="ready-team-name">A Takımı</h1>
+        <p id="ready-scores" class="ready-scores">0 - 0</p>
+        <p class="ready-hint">Kartı sadece anlatan kişi görsün. Hazır olunca başla!</p>
+        <button id="btn-ready-start">Başla</button>
+        <button id="btn-ready-quit" class="btn-exit">Oyundan Çık</button>
+    </div>
+
+    <!-- 5.6 TUR ÖZETİ EKRANI (Süre bitince ya da hedef puana ulaşılınca) -->
+    <div id="summary-screen" class="screen" style="display: none;">
+        <h2>Tur Özeti</h2>
+        <p id="summary-team-name" class="summary-team">A Takımı</p>
+        <p id="summary-turn-score" class="summary-turn-score">Bu tur: 0 puan</p>
+        <p class="ready-hint">Yanlış basılan sonucu değiştirmek için sonuç etiketine dokun.</p>
+        <div id="summary-list">
+            <!-- Oynanan kartlar JS ile buraya eklenecek -->
+        </div>
+        <p id="summary-total" class="ready-scores">0 - 0</p>
+        <button id="btn-summary-continue">Sıradaki Takıma Geç</button>
+        <button id="btn-summary-quit" class="btn-exit">Oyundan Çık</button>
+    </div>
+
+    <!-- 6. OYUN EKRANI -->
+    <div id="game-screen" class="screen" style="display: none;">
+        <div class="game-header">
+            <h3 id="active-team-display">A Takımı Oynuyor</h3>
+            <h2 id="time-left">60</h2>
+        </div>
+
+        <!-- Takım adı + skor kutuları (2-5 takım için JS doldurur) -->
+        <div id="scoreboard" class="game-scores"></div>
+
+        <div class="playing-card">
+            <h1 id="display-main-word">Kelime</h1>
+            <ul id="display-forbidden-words">
+                <li>Yasaklı 1</li>
+                <li>Yasaklı 2</li>
+                <li>Yasaklı 3</li>
+                <li>Yasaklı 4</li>
+                <li>Yasaklı 5</li>
+            </ul>
+        </div>
+
+        <div class="game-controls">
+            <button id="btn-correct">Doğru</button>
+            <button id="btn-taboo">Tabu</button>
+            <button id="btn-pass">Pas</button>
+        </div>
+
+        <div class="game-extra">
+            <button id="btn-pause">Duraklat</button>
+            <button id="btn-quit">Çıkış</button>
+        </div>
+    </div>
+
+    <!-- DURAKLATMA KATMANI (kartı gizler; .screen değildir, showScreen etkilemez) -->
+    <div id="pause-overlay" class="overlay" style="display: none;">
+        <div class="overlay-box">
+            <h2>Duraklatıldı</h2>
+            <button id="btn-resume">Devam Et</button>
+            <button id="btn-pause-quit" class="btn-exit">Oyundan Çık</button>
+        </div>
+    </div>
+
+    <!-- 7. KAZANMA EKRANI -->
+    <div id="victory-screen" class="screen" style="display: none;">
+        <img id="victory-image" class="logo logo-medium" src="assets/images/logo.png" alt="Kulüp Logosu" onerror="this.style.display='none'">
+        <h1 id="winner-text">Kazanan: Akatsuki!</h1>
+        <div id="final-standings" class="rank-list">
+            <!-- Takımların final sıralaması JS ile buraya eklenecek -->
+        </div>
+        <p id="victory-save-note" class="pool-count"></p>
+        <button id="btn-rematch">Rövanş (Yeni Oyun)</button>
+        <button class="btn-home">Ana Sayfaya Dön</button>
+    </div>
+
+    <!-- JAVASCRIPT DOSYALARI -->
+    <script type="module" src="database.js"></script>
+    <script src="music.js"></script>
+    <script src="sound.js"></script>
+    <script src="ui.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>

@@ -1,0 +1,802 @@
+/* --- GENEL AYARLAR VE TEMA --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    /* Karanlık lacivert/mor arka plan - Anime kulübü ruhuna uygun */
+    background-color: #1a1a2e;
+    color: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    min-height: 100dvh; /* Telefonlarda adres çubuğu yüzünden taşmasın */
+    padding: 20px;
+    padding-top: max(20px, env(safe-area-inset-top));
+    padding-right: max(20px, env(safe-area-inset-right));
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    padding-left: max(20px, env(safe-area-inset-left));
+}
+
+/* --- EKRAN KONTEYNERİ --- */
+.screen {
+    background-color: #16213e;
+    width: 100%;
+    max-width: 450px; /* Mobilde tam ekran, PC'de şık bir kutu */
+    padding: 30px 20px;
+    border-radius: 15px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+    text-align: center;
+}
+
+/* Başlıklar */
+h1, h2 {
+    color: #e94560; /* Neon Kırmızı/Pembe Vurgu */
+    margin-bottom: 25px;
+}
+
+/* --- LOGO --- */
+.logo {
+    display: block;
+    margin: 0 auto 15px;
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+.logo-large { width: min(220px, 60vw); margin-bottom: 20px; }
+.logo-medium { width: min(150px, 45vw); }
+.logo-small { width: min(90px, 28vw); margin-bottom: 8px; }
+
+/* --- GİRİŞ EKRANI --- */
+.splash {
+    padding: 50px 20px 40px;
+    animation: fadeUp 0.7s ease both;
+}
+
+.splash-title {
+    font-size: clamp(2.2rem, 11vw, 3rem);
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    text-shadow: 0 0 22px rgba(233, 69, 96, 0.5);
+}
+
+.splash-sub {
+    color: #aaa;
+    margin-bottom: 30px;
+}
+
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- BUTONLAR --- */
+button {
+    background-color: #0f3460;
+    color: white;
+    border: 2px solid #0f3460;
+    padding: 14px 20px;
+    margin: 8px auto;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    width: 90%;
+    transition: all 0.3s ease;
+    display: block;
+    touch-action: manipulation; /* Çift dokunmada yakınlaşmayı engeller */
+}
+
+button:active:not(:disabled) {
+    transform: scale(0.97);
+}
+
+.btn-back, .btn-home, .btn-exit, .btn-edit-back {
+    background-color: transparent;
+    border: 2px solid #555;
+    color: #ccc;
+    margin-top: 20px;
+}
+
+.btn-danger {
+    background-color: #F44336;
+    border-color: #F44336;
+}
+
+/* Pasif butonlar (örn. pas hakkı bitti) */
+button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* --- GİRDİ ALANLARI (INPUTS) --- */
+input[type="text"], input[type="number"], input[type="password"], select {
+    width: 90%;
+    padding: 12px;
+    margin: 8px 0;
+    border-radius: 8px;
+    border: none;
+    background-color: #2a2a4a;
+    color: white;
+    font-size: 16px; /* 16px altı iPhone'da otomatik yakınlaşma yapar */
+    outline: none;
+    text-align: center;
+}
+
+select {
+    text-align-last: center;
+    cursor: pointer;
+}
+
+input::placeholder {
+    color: #888;
+}
+
+.field-label {
+    display: block;
+    color: #ccc;
+    margin-top: 10px;
+}
+
+.check-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #ccc;
+    margin: 14px 0 6px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.check-row input {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    accent-color: #e94560;
+}
+
+/* --- TAKIM KURULUMU --- */
+.count-picker {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin: 8px 0 14px;
+}
+
+.count-picker .count-btn {
+    flex: 1;
+    width: auto;
+    margin: 0;
+    padding: 12px 0;
+    font-size: 18px;
+    background-color: transparent;
+    border: 2px solid #0f3460;
+}
+
+.count-picker .count-btn.selected {
+    background-color: #e94560;
+    border-color: #e94560;
+}
+
+.saved-teams-wrap {
+    margin: 4px 0 8px;
+}
+
+button.chip {
+    display: inline-block;
+    width: auto;
+    margin: 4px;
+    padding: 7px 14px;
+    font-size: 14px;
+    border-radius: 18px;
+}
+
+/* --- OYUN İÇİ KART TASARIMI --- */
+.playing-card {
+    background-color: #f4f4f4; /* Gerçek kart hissi için kirli beyaz */
+    color: #222;
+    border-radius: 15px;
+    padding: 30px 20px;
+    margin: 20px auto;
+    width: 90%;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    border-top: 15px solid #e94560; /* Kartın üstündeki renkli şerit */
+}
+
+#display-main-word {
+    font-size: clamp(1.7rem, 8.5vw, 2.2rem);
+    color: #1a1a2e;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 3px solid #ccc;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+}
+
+#display-forbidden-words {
+    list-style: none;
+}
+
+#display-forbidden-words li {
+    font-size: clamp(1.05rem, 4.8vw, 1.3rem);
+    margin: 10px 0;
+    color: #555;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+}
+
+/* --- OYUN EKRANI BİLEŞENLERİ --- */
+#game-screen {
+    -webkit-user-select: none;
+    user-select: none; /* Oyun sırasında yanlışlıkla metin seçilmesin */
+}
+
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 0 15px;
+}
+
+.game-header h2,
+.game-header h3 {
+    margin-bottom: 0;
+}
+
+.game-header h3 {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    text-align: left;
+}
+
+#time-left {
+    font-size: 2rem;
+    color: #e94560;
+}
+
+/* Son 10 saniyede sayaç kırmızıya dönüp yanıp söner */
+#time-left.time-warning {
+    color: #ff5252;
+    animation: timePulse 1s infinite;
+}
+
+@keyframes timePulse {
+    50% { opacity: 0.4; }
+}
+
+/* Skor tablosu: 2-5 takım, sırası gelen takım vurgulu */
+.game-scores {
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.score-box {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 4px;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.score-box.active {
+    border-color: #e94560;
+    background-color: rgba(233, 69, 96, 0.15);
+}
+
+.score-team {
+    max-width: 100%;
+    font-size: 0.9rem;
+    color: #ccc;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.score-value {
+    font-size: 1.8rem;
+    font-weight: bold;
+}
+
+/* 4-5 takımda kutular dar kalır, yazıları küçült */
+.game-scores.compact {
+    gap: 5px;
+}
+
+.game-scores.compact .score-team {
+    font-size: 0.72rem;
+}
+
+.game-scores.compact .score-value {
+    font-size: 1.4rem;
+}
+
+.game-controls {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* Oyun Butonları Özel Renkleri */
+.game-controls button {
+    margin: 0;
+    padding: 18px 4px;
+    width: 32%;
+    min-height: 60px;
+    font-size: 17px;
+}
+
+#btn-correct { background-color: #4CAF50; border-color: #4CAF50; }
+#btn-taboo { background-color: #F44336; border-color: #F44336; }
+#btn-pass { background-color: #9E9E9E; border-color: #9E9E9E; color: #333; }
+
+/* Pas hakkı bitince renk değişmesin */
+#btn-pass:disabled {
+    background-color: #9E9E9E;
+    border-color: #9E9E9E;
+    color: #333;
+}
+
+/* --- DURAKLAT / ÇIKIŞ BUTONLARI (OYUN İÇİ) --- */
+.game-extra {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.game-extra button {
+    margin: 0;
+    padding: 12px 5px;
+    width: 49%;
+    font-size: 14px;
+    background-color: transparent;
+    border: 2px solid #555;
+    color: #ccc;
+}
+
+/* --- HAZIR MISINIZ? EKRANI --- */
+.ready-message {
+    color: #ffb4c0;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+}
+
+.ready-scores {
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin: -10px 0 15px;
+    line-height: 1.5;
+}
+
+.ready-hint {
+    color: #aaa;
+    font-size: 0.95rem;
+    margin-bottom: 15px;
+}
+
+#btn-ready-start,
+#btn-summary-continue {
+    background-color: #4CAF50;
+    border-color: #4CAF50;
+    font-size: 20px;
+    padding: 16px 20px;
+}
+
+/* --- TUR ÖZETİ EKRANI --- */
+.summary-team {
+    font-size: 1.6rem;
+    font-weight: bold;
+    color: #ffffff;
+    margin-top: -10px;
+    margin-bottom: 5px;
+    word-break: break-word;
+}
+
+.summary-turn-score {
+    font-size: 1.2rem;
+    color: #ffb4c0;
+    margin-bottom: 10px;
+}
+
+#summary-list {
+    max-height: 280px;
+    overflow-y: auto;
+    background-color: #0f3460;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 20px;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    background-color: rgba(255,255,255,0.1);
+    margin-bottom: 8px;
+    padding: 8px 12px;
+    border-radius: 5px;
+    text-align: left;
+}
+
+.summary-item span {
+    font-weight: bold;
+    word-break: break-word;
+}
+
+.summary-item .summary-result {
+    width: auto;
+    min-width: 76px;
+    min-height: 40px;
+    margin: 0;
+    padding: 8px 12px;
+    font-size: 14px;
+    border: none;
+}
+
+.result-correct { background-color: #4CAF50; }
+.result-taboo { background-color: #F44336; }
+.result-pass { background-color: #9E9E9E; color: #222; }
+
+.summary-empty {
+    color: #aaa;
+    padding: 10px;
+}
+
+/* --- SIRALAMA SATIRLARI (liderlik tablosu + final sırası) --- */
+.rank-list,
+#leaderboard-list {
+    margin-bottom: 15px;
+}
+
+.rank-row {
+    display: grid;
+    grid-template-columns: 38px 1fr auto;
+    align-items: center;
+    gap: 8px;
+    background-color: rgba(255,255,255,0.08);
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    text-align: left;
+}
+
+.rank-row.rank-first {
+    background-color: rgba(233, 69, 96, 0.2);
+    border: 1px solid #e94560;
+}
+
+.rank-pos {
+    font-size: 1.3rem;
+    font-weight: bold;
+    text-align: center;
+    color: #ffb4c0;
+}
+
+.rank-name {
+    font-weight: bold;
+    font-size: 1.05rem;
+    overflow-wrap: anywhere;
+}
+
+.rank-sub {
+    color: #aaa;
+    font-size: 0.8rem;
+    margin-top: 2px;
+}
+
+.rank-value {
+    text-align: right;
+}
+
+.rank-main {
+    font-size: 1.3rem;
+    font-weight: bold;
+}
+
+#leaderboard-list {
+    max-height: 420px;
+    overflow-y: auto;
+}
+
+/* --- DURAKLATMA KATMANI (kartı tamamen kapatır) --- */
+.overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(26, 26, 46, 0.98);
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    z-index: 100;
+}
+
+.overlay-box {
+    background-color: #16213e;
+    width: 100%;
+    max-width: 450px;
+    padding: 30px 20px;
+    border-radius: 15px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+    text-align: center;
+}
+
+/* --- AYARLAR EKRANI --- */
+.setting-item {
+    margin-bottom: 10px;
+}
+
+.setting-item label {
+    display: block;
+    color: #ccc;
+    margin-bottom: 4px;
+}
+
+/* --- HAVUZ EKRANI LİSTESİ --- */
+.pool-count {
+    color: #aaa;
+    font-size: 0.9rem;
+    margin: 2px 0 10px;
+}
+
+#card-list {
+    max-height: 350px;
+    overflow-y: auto;
+    background-color: #0f3460;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 15px;
+}
+
+.pool-empty {
+    color: #aaa;
+    padding: 15px 5px;
+}
+
+/* Liste içindeki her bir kartın satırı */
+.pool-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    background-color: rgba(255,255,255,0.1);
+    margin-bottom: 8px;
+    padding: 10px 15px;
+    border-radius: 5px;
+    text-align: left;
+}
+
+.pool-item-info {
+    min-width: 0;
+}
+
+.pool-item span {
+    font-weight: bold;
+    font-size: 1.1rem;
+    word-break: break-word;
+}
+
+.pool-category {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background-color: rgba(233, 69, 96, 0.25);
+    color: #ffb4c0;
+    font-size: 0.8rem;
+}
+
+.pool-item button {
+    width: auto;
+    margin: 0;
+    padding: 8px 12px;
+    background-color: #F44336;
+    border: none;
+}
+
+/* Havuzdaki Buton Grubu */
+.pool-item-buttons {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.pool-item-buttons button {
+    margin: 0;
+    padding: 8px 12px;
+}
+
+.pool-item .btn-edit { background-color: #FF9800; }
+
+/* --- SES AYARI ve KAYNAKLAR --- */
+input[type="range"] {
+    width: 90%;
+    margin: 10px 0;
+    accent-color: #e94560;
+}
+
+#credits-list {
+    margin-bottom: 15px;
+}
+
+.credit-item {
+    background-color: rgba(255,255,255,0.08);
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    text-align: left;
+}
+
+/* --- FARE İLE HOVER (sadece fare olan cihazlarda; dokunmatikte takılı kalmasın) --- */
+@media (hover: hover) {
+    button:hover {
+        background-color: #e94560;
+        border-color: #e94560;
+        transform: scale(1.03);
+    }
+
+    button:disabled:hover {
+        background-color: #0f3460;
+        border-color: #0f3460;
+        transform: none;
+    }
+
+    .btn-back:hover, .btn-home:hover, .btn-exit:hover, .btn-edit-back:hover {
+        background-color: #555;
+        border-color: #555;
+    }
+
+    .btn-danger:hover {
+        background-color: #da190b;
+        border-color: #da190b;
+    }
+
+    .count-picker .count-btn:hover {
+        transform: none;
+        border-color: #e94560;
+    }
+
+    #btn-correct:hover { background-color: #45a049; border-color: #45a049; }
+    #btn-taboo:hover { background-color: #da190b; border-color: #da190b; }
+    #btn-pass:hover { background-color: #777; border-color: #777; color: white; }
+    #btn-pass:disabled:hover { background-color: #9E9E9E; border-color: #9E9E9E; color: #333; }
+
+    #btn-ready-start:hover,
+    #btn-summary-continue:hover {
+        background-color: #45a049;
+        border-color: #45a049;
+    }
+
+    .game-extra button:hover {
+        background-color: #555;
+        border-color: #555;
+        transform: none;
+    }
+
+    .summary-item .summary-result:hover {
+        transform: none;
+        filter: brightness(1.15);
+    }
+
+    .summary-item .result-correct:hover { background-color: #4CAF50; }
+    .summary-item .result-taboo:hover { background-color: #F44336; }
+    .summary-item .result-pass:hover { background-color: #9E9E9E; }
+
+    .pool-item .btn-edit:hover { background-color: #e68a00; }
+}
+
+/* --- TELEFON (dar ekran) --- */
+@media (max-width: 480px) {
+    body {
+        padding: 0;
+        padding-top: env(safe-area-inset-top);
+        padding-right: env(safe-area-inset-right);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        align-items: stretch;
+    }
+
+    /* Telefonda kutu yerine tam ekran */
+    .screen {
+        max-width: none;
+        min-height: 100vh;
+        min-height: 100dvh;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 24px 16px;
+    }
+
+    .splash {
+        padding-top: 16vh;
+        padding-top: 16dvh;
+    }
+
+    h1, h2 {
+        margin-bottom: 18px;
+    }
+
+    button {
+        width: 100%;
+    }
+
+    input[type="text"], input[type="number"], input[type="password"], input[type="range"], select {
+        width: 100%;
+    }
+
+    /* Kart ekranı daha sıkı: her şey bir ekrana sığsın */
+    .playing-card {
+        width: 100%;
+        padding: 20px 14px;
+        margin: 12px auto;
+    }
+
+    #display-main-word {
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+    }
+
+    #display-forbidden-words li {
+        margin: 7px 0;
+    }
+
+    .game-header {
+        padding: 0 4px;
+    }
+
+    /* Doğru / Tabu / Pas başparmakla kolay basılsın, kısa ekranda altta sabit kalsın */
+    .game-controls {
+        position: sticky;
+        bottom: 0;
+        background-color: #16213e;
+        padding: 10px 0 6px;
+        margin-top: 8px;
+        z-index: 5;
+    }
+
+    .game-controls button {
+        min-height: 64px;
+        font-size: 18px;
+    }
+
+    .game-extra {
+        margin-top: 10px;
+    }
+
+    .pool-item {
+        padding: 10px;
+    }
+
+    #card-list {
+        max-height: 55vh;
+        max-height: 55dvh;
+    }
+
+    #summary-list {
+        max-height: 40vh;
+        max-height: 40dvh;
+    }
+
+    .overlay {
+        padding: 16px;
+    }
+}
