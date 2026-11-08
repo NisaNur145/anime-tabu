@@ -25,6 +25,8 @@
         <button id="btn-play">Oyna</button>
         <button id="btn-add-card">Kart Ekle</button>
         <button id="btn-pool">Havuzu Görüntüle</button>
+        <button id="btn-pending" style="display: none;">Onay Bekleyen Kartlar (0)</button>
+        <button id="btn-bulk" style="display: none;">Toplu Kart Ekle</button>
         <button id="btn-leaderboard">Liderlik Tablosu</button>
         <button id="btn-settings">Ayarlar</button>
         <button id="btn-admin" class="btn-exit">Yönetici Girişi</button>
@@ -73,6 +75,7 @@
     <!-- 3. KART EKLEME EKRANI -->
     <div id="add-card-screen" class="screen" style="display: none;">
         <h2>Yeni Kart Ekle</h2>
+        <p id="add-card-note" class="pool-count"></p>
         <input type="text" id="input-main-word" placeholder="Anlatılacak Kelime (Ana Kelime)" maxlength="40">
         <input type="text" id="input-category" list="category-list" placeholder="Kategori (örn: Naruto) - boşsa Genel" maxlength="30">
         <div class="forbidden-inputs">
@@ -118,6 +121,32 @@
         <button class="btn-back">Geri</button>
     </div>
 
+    <!-- 4.2 ONAY BEKLEYEN KARTLAR (sadece yönetici) -->
+    <div id="pending-screen" class="screen" style="display: none;">
+        <h2>Onay Bekleyen Kartlar</h2>
+        <p id="pending-count" class="pool-count">Onay bekleyen kart yok.</p>
+        <div id="pending-list">
+            <!-- Kartlar JS ile buraya eklenecek -->
+        </div>
+        <button id="btn-approve-all">Hepsini Onayla</button>
+        <button id="btn-reject-all" class="btn-danger">Hepsini Reddet</button>
+        <button class="btn-back">Geri</button>
+    </div>
+
+    <!-- 4.3 TOPLU KART EKLEME (sadece yönetici) -->
+    <div id="bulk-screen" class="screen" style="display: none;">
+        <h2>Toplu Kart Ekle</h2>
+        <p class="pool-count">Her satıra bir kart yaz. Biçim:<br>
+            <strong>Ana kelime | yasak1, yasak2, yasak3, yasak4, yasak5 | Kategori</strong><br>
+            Kategori yazılmazsa aşağıdaki varsayılan kategori kullanılır. Excel'den kopyalanan satırlar da (sekmeyle ayrılmış) çalışır.</p>
+        <input type="text" id="bulk-category" list="category-list" placeholder="Varsayılan kategori (örn: Naruto) - boşsa Genel" maxlength="30">
+        <textarea id="bulk-text" rows="9" placeholder="Naruto Uzumaki | Hokage, Ramen, Kurama, Konoha, Rasengan | Naruto&#10;Monkey D. Luffy | Korsan, Kauçuk, Hasır Şapka, Gemi, Et | One Piece"></textarea>
+        <button id="btn-bulk-preview">Kontrol Et</button>
+        <div id="bulk-result" class="bulk-result"></div>
+        <button id="btn-bulk-save" style="display: none;">Kartları Ekle</button>
+        <button class="btn-back">Geri</button>
+    </div>
+
     <!-- 4.5 LİDERLİK TABLOSU -->
     <div id="leaderboard-screen" class="screen" style="display: none;">
         <h2>Liderlik Tablosu</h2>
@@ -144,6 +173,10 @@
             <label for="pass-limit">Tur Başına Pas Hakkı (0 = sınırsız):</label>
             <input type="number" id="pass-limit" value="3" min="0" inputmode="numeric">
         </div>
+        <label class="check-row">
+            <input type="checkbox" id="equal-turns" checked>
+            <span>Eşit tur: hedefe ulaşılsa da herkes aynı sayıda tur oynasın</span>
+        </label>
         <label class="check-row">
             <input type="checkbox" id="vibration-enabled" checked>
             <span>Titreşim (destekleyen telefonlarda)</span>

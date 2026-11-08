@@ -14,6 +14,7 @@ let currentCard = null;   // Ekranda gösterilen kart
 let targetScore = 50;
 let turnDuration = 60;
 let passLimit = 3;        // Tur başına pas hakkı (0 = sınırsız)
+let equalTurns = true;    // Hedef puana ulaşılsa da herkes eşit sayıda tur oynasın
 let passesLeft = 3;
 let selectedCategory = ""; // Boş = tüm kategoriler
 let turnLog = [];          // Turda oynanan kartlar: { word, points }
@@ -56,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
         targetScore = settings.targetScore;
         turnDuration = settings.turnDuration;
         passLimit = settings.passLimit;
+        equalTurns = settings.equalTurns !== false;
 
         // Seçilen kategori (boşsa tüm kartlar)
         selectedCategory = document.getElementById('game-category').value;
@@ -380,6 +382,14 @@ function targetReached() {
     return teams.some(team => team.score >= targetScore);
 }
 
+// Oyun şimdi bitmeli mi? Hedefe ulaşıldıysa ve (eşit tur kapalıysa ya da son takımın turuysa) evet.
+// Eşit tur açıkken tur dönüşü bitmeden oyun kesilmez, böylece her takım aynı sayıda tur oynar.
+function shouldEndGame() {
+    if (!targetReached()) return false;
+    if (!equalTurns) return true;
+    return activeTeam === teams.length - 1;
+}
+
 function showSummaryScreen() {
     document.getElementById('summary-team-name').textContent = activeTeamName();
     renderSummaryList();
@@ -423,7 +433,7 @@ function renderSummaryList() {
         `Bu tur: ${turnTotal > 0 ? '+' : ''}${turnTotal} puan`;
     document.getElementById('summary-total').textContent = formatScores();
     document.getElementById('btn-summary-continue').textContent =
-        targetReached() ? 'Sonucu Gör' : 'Sıradaki Takıma Geç';
+        shouldEndGame() ? 'Sonucu Gör' : 'Sıradaki Takıma Geç';
 }
 
 // Yanlış basılan sonucu düzelt: puanı farkı kadar ayarla
@@ -439,12 +449,15 @@ function cycleResult(entry) {
 
 // Özet onaylandı: hedef puana ulaşıldıysa oyun biter, yoksa sıra bir sonraki takıma geçer
 function finishSummary() {
-    if (targetReached()) {
+    if (shouldEndGame()) {
         endGame();
         return;
     }
+    const reachedAlready = targetReached(); // Hedefe ulaşıldı ama tur dönüşü bitmedi
     activeTeam = (activeTeam + 1) % teams.length;
-    showReadyScreen("Sıradaki takım hazırlansın!");
+    showReadyScreen(reachedAlready
+        ? "Hedef puana ulaşıldı! Herkes eşit tur oynasın diye tur tamamlanıyor. Sıradaki takım hazırlansın!"
+        : "Sıradaki takım hazırlansın!");
 }
 
 function endGame() {
@@ -587,7 +600,7 @@ function startMenuMusic() {
     // Daha önce çalıyorsa kaldığı yerden devam et
     if (menuAudio) {
         menuAudio.volume = Math.min(1, menuVolume());
-        menuAudio.play().catch(() => { /* tarayıcı engellerse sessiz kal */ });
+        tryPlayMenu(menuAudio);
         return;
     }
 
@@ -603,24 +616,42 @@ function startMenuMusic() {
     const song = menuSongQueue.shift();
     const audio = new Audio(MUSIC_FOLDER + song.file);
     audio.loop = true;
+    audio.preload = 'auto';
     audio.volume = Math.min(1, menuVolume());
     menuAudio = audio;
 
     audio.addEventListener('loadedmetadata', () => {
         if (menuAudio !== audio) return;
         const start = Number(song.start) || 0;
-        if (Number.isFinite(audio.duration) && start < audio.duration - 5) audio.currentTime = start;
-        if (MENU_SCREENS.includes(currentScreenId) && !document.hidden) {
-            audio.play().catch(() => { /* tarayıcı engellerse sessiz kal */ });
-        }
+        if (start > 0 && Number.isFinite(audio.duration) && start < audio.duration - 5) audio.currentTime = start;
     });
 
     // Dosya yoksa ya da bozuksa sıradaki menü şarkısını dene
     audio.addEventListener('error', () => {
+        console.warn('Menü müziği yüklenemedi:', MUSIC_FOLDER + song.file, audio.error);
         if (menuAudio !== audio) return;
         menuAudio = null;
         startMenuMusic();
     });
+
+    // Dokunuşun içinde hemen çal (Safari/iOS yalnızca böyle izin verir)
+    tryPlayMenu(audio);
+}
+
+// Çalmayı dener; tarayıcı engellerse bir sonraki dokunuşta tekrar dener
+function tryPlayMenu(audio) {
+    const p = audio.play();
+    if (p && p.catch) {
+        p.catch(err => {
+            console.warn('Menü müziği başlatılamadı:', err && err.name);
+            const retry = () => {
+                if (menuAudio === audio && MENU_SCREENS.includes(currentScreenId) && !document.hidden && getSettings().music) {
+                    audio.play().catch(() => {});
+                }
+            };
+            document.addEventListener('pointerdown', retry, { once: true });
+        });
+    }
 }
 
 function pauseMenuMusic() {

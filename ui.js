@@ -27,7 +27,7 @@ function writeJSON(key, value) {
 
 // --- AYARLAR (Sadece Bu Cihazda Kalır) ---
 function getSettings() {
-    const defaults = { targetScore: 50, turnDuration: 60, passLimit: 3, vibration: true, sound: true, music: true, volume: 70 };
+    const defaults = { targetScore: 50, turnDuration: 60, passLimit: 3, equalTurns: true, vibration: true, sound: true, music: true, volume: 70 };
     const saved = readJSON(SETTINGS_KEY, null);
     // Eski kayıtlarda yeni alanlar yoksa varsayılan değerler devreye girsin
     return saved && typeof saved === 'object' ? Object.assign(defaults, saved) : defaults;
@@ -49,7 +49,8 @@ function vibrate(pattern) {
 // Menü müziği bu ekranlarda çalar; oyun ekranlarında durur (game.js'teki syncMenuMusic kullanır)
 const MENU_SCREENS = [
     'main-menu', 'team-setup-screen', 'add-card-screen', 'edit-card-screen', 'pool-screen',
-    'leaderboard-screen', 'settings-screen', 'credits-screen', 'admin-login-screen'
+    'leaderboard-screen', 'settings-screen', 'credits-screen', 'admin-login-screen',
+    'pending-screen', 'bulk-screen'
 ];
 let currentScreenId = 'splash-screen';
 
@@ -94,6 +95,18 @@ function updateAdminUI() {
 
     const resetBtn = document.getElementById('btn-leaderboard-reset');
     if (resetBtn) resetBtn.style.display = window.isAdmin ? 'block' : 'none';
+
+    // Onay kuyruğu ve toplu ekleme sadece yöneticiye görünür
+    ['btn-pending', 'btn-bulk'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = window.isAdmin ? 'block' : 'none';
+    });
+    const addNote = document.getElementById('add-card-note');
+    if (addNote) {
+        addNote.textContent = window.isAdmin
+            ? 'Yönetici olarak eklediğin kartlar doğrudan havuza girer.'
+            : 'Eklediğin kart yönetici onayından sonra havuza girer.';
+    }
 
     renderPool();
 }
@@ -579,6 +592,218 @@ function renderPool() {
     });
 }
 
+// --- ONAY BEKLEYEN KARTLAR (yönetici) ---
+function poolHasWord(word) {
+    const n = normalizeText(word);
+    return (window.globalCards || []).find(card => normalizeText(card.word) === n) || null;
+}
+
+// Kuyruk değişince: menü butonundaki sayıyı ve (açıksa) listeyi güncelle
+function updatePendingUI() {
+    const pending = window.pendingCards || [];
+    const btn = document.getElementById('btn-pending');
+    if (btn) btn.textContent = `Onay Bekleyen Kartlar (${pending.length})`;
+    renderPending();
+}
+
+function renderPending() {
+    const list = document.getElementById('pending-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    const pending = window.pendingCards || [];
+    const countLabel = document.getElementById('pending-count');
+    if (countLabel) {
+        countLabel.textContent = window.pendingError
+            ? 'Onay bekleyen kartlar okunamadı. Firebase kurallarını kontrol et.'
+            : (pending.length === 0 ? 'Onay bekleyen kart yok.' : `${pending.length} kart onay bekliyor`);
+    }
+    const approveAll = document.getElementById('btn-approve-all');
+    const rejectAll = document.getElementById('btn-reject-all');
+    if (approveAll) approveAll.style.display = pending.length ? 'block' : 'none';
+    if (rejectAll) rejectAll.style.display = pending.length ? 'block' : 'none';
+
+    pending.forEach((card) => {
+        const row = document.createElement('div');
+        row.className = 'pool-item pending-item';
+
+        const info = document.createElement('div');
+        info.className = 'pool-item-info';
+
+        const wordSpan = document.createElement('span');
+        wordSpan.textContent = card.word;
+        const categoryTag = document.createElement('div');
+        categoryTag.className = 'pool-category';
+        categoryTag.textContent = card.category || DEFAULT_CATEGORY;
+        const forbidden = document.createElement('div');
+        forbidden.className = 'pending-forbidden';
+        forbidden.textContent = 'Yasaklı: ' + (card.forbidden || []).join(', ');
+
+        info.appendChild(wordSpan);
+        info.appendChild(categoryTag);
+        info.appendChild(forbidden);
+
+        const existing = poolHasWord(card.word);
+        if (existing) {
+            const dup = document.createElement('div');
+            dup.className = 'pending-dup';
+            dup.textContent = `Bu kelime havuzda zaten var (Kategori: ${existing.category}).`;
+            info.appendChild(dup);
+        }
+        row.appendChild(info);
+
+        const btnGroup = document.createElement('div');
+        btnGroup.className = 'pool-item-buttons';
+
+        const approveBtn = document.createElement('button');
+        approveBtn.className = 'btn-approve';
+        approveBtn.textContent = 'Onayla';
+        approveBtn.addEventListener('click', () => {
+            if (existing && !confirm('Bu kelime havuzda zaten var. Yine de onaylansın mı?')) return;
+            window.approvePendingCards([card]).catch((err) => showWriteError(err, 'Kart onaylanamadı!'));
+        });
+
+        const rejectBtn = document.createElement('button');
+        rejectBtn.className = 'btn-delete';
+        rejectBtn.textContent = 'Reddet';
+        rejectBtn.addEventListener('click', () => {
+            window.rejectPendingCards([card.id]).catch((err) => showWriteError(err, 'Kart reddedilemedi!'));
+        });
+
+        btnGroup.appendChild(approveBtn);
+        btnGroup.appendChild(rejectBtn);
+        row.appendChild(btnGroup);
+        list.appendChild(row);
+    });
+}
+
+// --- TOPLU KART EKLEME (yönetici) ---
+const BULK_MAX_CARDS = 500;
+let bulkValidCards = [];
+
+// Metni satır satır çözümler. Dönen: { valid: [kart], errors: ['Satır 3: ...'] }
+function parseBulkCards(text, defaultCategoryRaw) {
+    const valid = [];
+    const errors = [];
+    const seenWords = new Set();
+    const batchCategories = new Map(); // Aynı kategori farklı yazılışlarla gelirse tek yazımda birleşsin
+
+    const defaultCategory = resolveCategory(defaultCategoryRaw);
+    const lines = String(text || '').split(/\r?\n/);
+
+    lines.forEach((rawLine, index) => {
+        const line = rawLine.trim();
+        if (line === '' || line.startsWith('#')) return;
+        const label = `Satır ${index + 1}`;
+
+        const parts = line.split(/\s*[|\t]\s*/);
+        const word = (parts[0] || '').trim();
+        const forbidden = (parts[1] || '').split(/\s*[,;]\s*/).map(w => w.trim()).filter(w => w !== '');
+        const categoryRaw = (parts[2] || '').replace(/\s+/g, ' ').trim();
+
+        if (!word) { errors.push(`${label}: ana kelime boş.`); return; }
+        if (word.length > 40) { errors.push(`${label}: "${word}" ana kelimesi 40 karakterden uzun.`); return; }
+        if (forbidden.length !== 5) {
+            errors.push(`${label}: "${word}" için tam 5 yasaklı kelime olmalı (${forbidden.length} bulundu).`);
+            return;
+        }
+        const tooLong = forbidden.find(w => w.length > 40);
+        if (tooLong) { errors.push(`${label}: "${tooLong}" yasaklı kelimesi 40 karakterden uzun.`); return; }
+
+        const normalizedWord = normalizeText(word);
+        if (forbidden.some(w => normalizeText(w) === normalizedWord)) {
+            errors.push(`${label}: yasaklı kelimelerden biri ana kelimeyle aynı ("${word}").`);
+            return;
+        }
+        if (new Set(forbidden.map(normalizeText)).size !== forbidden.length) {
+            errors.push(`${label}: "${word}" kartında tekrar eden yasaklı kelime var.`);
+            return;
+        }
+
+        const existing = poolHasWord(word);
+        if (existing) { errors.push(`${label}: "${word}" havuzda zaten var.`); return; }
+        if (seenWords.has(normalizedWord)) { errors.push(`${label}: "${word}" bu listede birden fazla kez yazılmış.`); return; }
+
+        let category = defaultCategory;
+        if (categoryRaw) {
+            const key = normalizeText(categoryRaw);
+            category = batchCategories.has(key) ? batchCategories.get(key) : resolveCategory(categoryRaw);
+            batchCategories.set(key, category);
+        }
+        if (category.length > 30) { errors.push(`${label}: "${category}" kategorisi 30 karakterden uzun.`); return; }
+
+        seenWords.add(normalizedWord);
+        valid.push({ word, forbidden, category });
+    });
+
+    return { valid, errors };
+}
+
+function previewBulk() {
+    const resultBox = document.getElementById('bulk-result');
+    const saveBtn = document.getElementById('btn-bulk-save');
+    resultBox.innerHTML = '';
+
+    const { valid, errors } = parseBulkCards(
+        document.getElementById('bulk-text').value,
+        document.getElementById('bulk-category').value
+    );
+
+    if (valid.length > BULK_MAX_CARDS) {
+        bulkValidCards = [];
+        saveBtn.style.display = 'none';
+        resultBox.textContent = `Tek seferde en fazla ${BULK_MAX_CARDS} kart eklenebilir (${valid.length} bulundu). Listeyi bölüp tekrar dene.`;
+        return;
+    }
+
+    bulkValidCards = valid;
+
+    const summary = document.createElement('div');
+    if (valid.length === 0 && errors.length === 0) {
+        summary.textContent = 'Eklenecek satır bulunamadı.';
+    } else {
+        const ok = document.createElement('span');
+        ok.className = 'bulk-ok';
+        ok.textContent = `${valid.length} geçerli kart`;
+        summary.appendChild(ok);
+        summary.appendChild(document.createTextNode(errors.length ? `, ${errors.length} hatalı satır (eklenmeyecek):` : '.'));
+    }
+    resultBox.appendChild(summary);
+
+    if (errors.length) {
+        const errBox = document.createElement('div');
+        errBox.className = 'bulk-errors';
+        errors.forEach((msg) => {
+            const line = document.createElement('div');
+            line.textContent = msg;
+            errBox.appendChild(line);
+        });
+        resultBox.appendChild(errBox);
+    }
+
+    saveBtn.textContent = `${valid.length} Kartı Havuza Ekle`;
+    saveBtn.style.display = valid.length ? 'block' : 'none';
+}
+
+function saveBulk() {
+    if (bulkValidCards.length === 0) return;
+    const count = bulkValidCards.length;
+    if (!confirm(`${count} kart havuza eklenecek. Onaylıyor musun?`)) return;
+
+    const saveBtn = document.getElementById('btn-bulk-save');
+    saveBtn.disabled = true;
+    window.addCardsBulk(bulkValidCards)
+        .then(() => {
+            document.getElementById('bulk-text').value = '';
+            document.getElementById('bulk-result').innerHTML = '';
+            bulkValidCards = [];
+            saveBtn.style.display = 'none';
+            alert(`${count} kart havuza eklendi!`);
+        })
+        .catch((err) => showWriteError(err, 'Kartlar eklenemedi!'))
+        .finally(() => { saveBtn.disabled = false; });
+}
+
 // --- MÜZİK VE SES KAYNAKLARI EKRANI ---
 // music.js'teki şarkılardan başlığı yazılmış olanları listeler (CC BY lisansı için yapımcı adı gerekir)
 function renderCredits() {
@@ -693,6 +918,47 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+
+    // Onay bekleyen kartlar (yönetici)
+    document.getElementById('btn-pending').addEventListener('click', () => {
+        renderPending();
+        showScreen('pending-screen');
+    });
+    document.getElementById('btn-approve-all').addEventListener('click', () => {
+        const pending = window.pendingCards || [];
+        const toApprove = pending.filter(card => !poolHasWord(card.word));
+        const skipped = pending.length - toApprove.length;
+        if (toApprove.length === 0) {
+            alert('Onaylanacak yeni kart yok (hepsi havuzda zaten var). Tek tek reddedebilirsin.');
+            return;
+        }
+        const extra = skipped ? `\n(Havuzda zaten olan ${skipped} kart atlanacak.)` : '';
+        if (confirm(`${toApprove.length} kart havuza eklenecek.${extra}`)) {
+            window.approvePendingCards(toApprove).catch((err) => showWriteError(err, 'Kartlar onaylanamadı!'));
+        }
+    });
+    document.getElementById('btn-reject-all').addEventListener('click', () => {
+        const pending = window.pendingCards || [];
+        if (pending.length && confirm(`Bekleyen ${pending.length} kartın hepsi silinecek. Emin misin?`)) {
+            window.rejectPendingCards(pending.map(card => card.id)).catch((err) => showWriteError(err, 'Kartlar reddedilemedi!'));
+        }
+    });
+
+    // Toplu kart ekleme (yönetici)
+    document.getElementById('btn-bulk').addEventListener('click', () => {
+        refreshCategoryUI();
+        showScreen('bulk-screen');
+    });
+    document.getElementById('btn-bulk-preview').addEventListener('click', previewBulk);
+    document.getElementById('btn-bulk-save').addEventListener('click', saveBulk);
+    // Metin değişince eski kontrol sonucu geçersiz olur: tekrar "Kontrol Et" gerekir
+    ['bulk-text', 'bulk-category'].forEach((id) => {
+        document.getElementById(id).addEventListener('input', () => {
+            bulkValidCards = [];
+            document.getElementById('btn-bulk-save').style.display = 'none';
+        });
+    });
+
     // Takım sayısı seçimi (2-5) ve takım kutuları
     document.querySelectorAll('.count-btn').forEach(btn => {
         btn.addEventListener('click', () => setTeamCount(btn.dataset.count));
@@ -709,6 +975,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('target-score').value = settings.targetScore;
         document.getElementById('turn-duration').value = settings.turnDuration;
         document.getElementById('pass-limit').value = settings.passLimit;
+        document.getElementById('equal-turns').checked = settings.equalTurns !== false;
         document.getElementById('vibration-enabled').checked = !!settings.vibration;
         document.getElementById('sound-enabled').checked = !!settings.sound;
         document.getElementById('music-enabled').checked = !!settings.music;
@@ -746,12 +1013,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        window.saveCardToDatabase(mainWord, forbiddenWords, category)
-            .then(() => {
+        window.submitCard(mainWord, forbiddenWords, category)
+            .then((result) => {
                 // Formu temizle (kategori kalsın: aynı diziden art arda kart eklemek kolaylaşır)
                 mainWordInput.value = '';
                 forbiddenInputs.forEach(input => input.value = '');
-                alert('Kart Firebase havuzuna eklendi! Tüm cihazlarda anında görünecek.');
+                alert(result && result.approved
+                    ? 'Kart havuza eklendi! Tüm cihazlarda anında görünecek.'
+                    : 'Kartın alındı! Yönetici onayladıktan sonra havuza eklenecek.');
             })
             .catch((err) => {
                 showWriteError(err, 'Kart kaydedilemedi!');
@@ -792,13 +1061,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetScore = parseInt(document.getElementById('target-score').value);
         const turnDuration = parseInt(document.getElementById('turn-duration').value);
         const passLimit = parseInt(document.getElementById('pass-limit').value);
+        const equalTurns = document.getElementById('equal-turns').checked;
         const vibration = document.getElementById('vibration-enabled').checked;
         const sound = document.getElementById('sound-enabled').checked;
         const music = document.getElementById('music-enabled').checked;
         const volume = Math.max(0, Math.min(100, parseInt(document.getElementById('volume-level').value) || 0));
 
         if (targetScore > 0 && turnDuration > 0 && passLimit >= 0) {
-            saveSettings({ targetScore, turnDuration, passLimit, vibration, sound, music, volume });
+            saveSettings({ targetScore, turnDuration, passLimit, equalTurns, vibration, sound, music, volume });
             vibrate(60); // Açıksa küçük bir deneme titreşimi
             if (typeof refreshMenuMusic === 'function') refreshMenuMusic(); // Müzik/ses ayarı hemen uygulansın
             alert('Oyun ayarları kaydedildi!');

@@ -34,9 +34,8 @@ window.globalGames = [];
 window.gamesLoaded = false;
 window.gamesError = false;
 
-// --- KART HAVUZUNU DİNLE ---
-const cardsRef = ref(db, 'cards');
-onValue(cardsRef, (snapshot) => {
+// Firebase kayıtlarını kart listesine çevirir (hem havuz hem onay kuyruğu için)
+function readCards(snapshot) {
     const cards = [];
     snapshot.forEach((child) => {
         const data = child.val();
@@ -59,8 +58,13 @@ onValue(cardsRef, (snapshot) => {
             category: data.category || DEFAULT_CATEGORY
         });
     });
+    return cards;
+}
 
-    window.globalCards = cards;
+// --- KART HAVUZUNU DİNLE ---
+const cardsRef = ref(db, 'cards');
+onValue(cardsRef, (snapshot) => {
+    window.globalCards = readCards(snapshot);
     window.cardsLoaded = true;
     window.cardsError = false;
     notifyUI();
@@ -72,11 +76,45 @@ onValue(cardsRef, (snapshot) => {
     notifyUI();
 });
 
+// --- ONAY BEKLEYEN KARTLAR (sadece yönetici okuyabilir) ---
+const pendingRef = ref(db, 'pending');
+window.pendingCards = [];
+window.pendingError = false;
+let unsubscribePending = null;
+
+function notifyPending() {
+    if (typeof updatePendingUI === "function") updatePendingUI();
+}
+
+function startPendingListener() {
+    if (unsubscribePending) return;
+    unsubscribePending = onValue(pendingRef, (snapshot) => {
+        window.pendingCards = readCards(snapshot);
+        window.pendingError = false;
+        notifyPending();
+    }, (error) => {
+        console.error("Onay bekleyen kartlar okunamadı:", error);
+        window.pendingError = true;
+        notifyPending();
+    });
+}
+
+function stopPendingListener() {
+    if (unsubscribePending) {
+        unsubscribePending();
+        unsubscribePending = null;
+    }
+    window.pendingCards = [];
+    window.pendingError = false;
+    notifyPending();
+}
+
 // Arayüze "veri değişti" haberi ver (ui.js fonksiyonları varsa)
 function notifyUI() {
     if (typeof updateCardsStatusUI === "function") updateCardsStatusUI();
     if (typeof refreshCategoryUI === "function") refreshCategoryUI();
     if (typeof renderPool === "function") renderPool();
+    if (typeof renderPending === "function") renderPending();
 }
 
 // --- KAYITLI OYUNLARI DİNLE (liderlik tablosu bunlardan hesaplanır) ---
@@ -112,6 +150,7 @@ onValue(gamesRef, (snapshot) => {
 // --- YÖNETİCİ GİRİŞİ (Firebase Authentication) ---
 onAuthStateChanged(auth, (user) => {
     window.isAdmin = !!user;
+    if (window.isAdmin) startPendingListener(); else stopPendingListener();
     if (typeof updateAdminUI === "function") updateAdminUI();
 });
 
@@ -125,13 +164,44 @@ window.adminLogout = function() {
 
 // --- KART İŞLEMLERİ ---
 // Hepsi Promise döndürür; hata yakalama ui.js'te.
-// Ekleme herkese açık, düzenleme ve silme sadece yönetici (kurallar sunucuda uygulanır).
-window.saveCardToDatabase = function(mainWord, forbiddenArray, category) {
-    return push(cardsRef, {
+// Herkes kart önerebilir (onay kuyruğuna düşer); havuza ekleme, düzenleme ve silme sadece yönetici (kurallar sunucuda uygulanır).
+window.submitCard = function(mainWord, forbiddenArray, category) {
+    const data = {
         word: mainWord,
         forbidden: forbiddenArray,
         category: category || DEFAULT_CATEGORY
+    };
+    if (window.isAdmin) {
+        return push(cardsRef, data).then(() => ({ approved: true }));
+    }
+    return push(pendingRef, data).then(() => ({ approved: false }));
+};
+
+// Onay bekleyen kartları havuza taşır (kuyruktan silinir, tek işlemde)
+window.approvePendingCards = function(cards) {
+    const updates = {};
+    cards.forEach((c) => {
+        updates['cards/' + c.id] = { word: c.word, forbidden: c.forbidden, category: c.category || DEFAULT_CATEGORY };
+        updates['pending/' + c.id] = null;
     });
+    return update(ref(db), updates);
+};
+
+// Onay bekleyen kartları kuyruktan siler
+window.rejectPendingCards = function(ids) {
+    const updates = {};
+    ids.forEach((id) => { updates['pending/' + id] = null; });
+    return update(ref(db), updates);
+};
+
+// Toplu kart ekleme: [{ word, forbidden, category }] tek işlemde havuza yazılır (yönetici)
+window.addCardsBulk = function(cards) {
+    const updates = {};
+    cards.forEach((c) => {
+        const key = push(cardsRef).key; // Yeni benzersiz ID (henüz yazmaz)
+        updates['cards/' + key] = { word: c.word, forbidden: c.forbidden, category: c.category || DEFAULT_CATEGORY };
+    });
+    return update(ref(db), updates);
 };
 
 window.deleteCardFromDatabase = function(cardId) {

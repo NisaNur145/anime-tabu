@@ -559,7 +559,7 @@ button.chip {
     margin: 2px 0 10px;
 }
 
-#card-list {
+#card-list, #pending-list {
     max-height: 350px;
     overflow-y: auto;
     background-color: #0f3460;
@@ -627,6 +627,66 @@ button.chip {
 }
 
 .pool-item .btn-edit { background-color: #FF9800; }
+.pool-item .btn-approve { background-color: #4CAF50; }
+
+/* --- ONAY KUYRUĞU ve TOPLU EKLEME --- */
+.pending-item {
+    flex-wrap: wrap;
+}
+
+.pending-forbidden {
+    margin-top: 6px;
+    color: #ccc;
+    font-size: 0.85rem;
+    word-break: break-word;
+}
+
+.pending-dup {
+    margin-top: 6px;
+    color: #ffb74d;
+    font-size: 0.85rem;
+}
+
+textarea {
+    width: 90%;
+    padding: 12px;
+    margin: 8px 0;
+    border-radius: 8px;
+    border: none;
+    background-color: #2a2a4a;
+    color: white;
+    font-family: inherit;
+    font-size: 16px;
+    outline: none;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+textarea::placeholder {
+    color: #888;
+}
+
+.bulk-result {
+    text-align: left;
+    color: #ccc;
+    font-size: 0.9rem;
+    margin: 4px 0;
+}
+
+.bulk-result .bulk-ok { color: #81c784; font-weight: bold; }
+
+.bulk-errors {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 6px;
+    padding: 8px 10px;
+    background-color: rgba(244, 67, 54, 0.12);
+    border-radius: 8px;
+    color: #ffb4ab;
+    word-break: break-word;
+}
+
+.bulk-errors div { margin-bottom: 4px; }
 
 /* --- SES AYARI ve KAYNAKLAR --- */
 input[type="range"] {
@@ -739,7 +799,7 @@ input[type="range"] {
         width: 100%;
     }
 
-    input[type="text"], input[type="number"], input[type="password"], input[type="range"], select {
+    input[type="text"], input[type="number"], input[type="password"], input[type="range"], select, textarea {
         width: 100%;
     }
 
@@ -786,7 +846,7 @@ input[type="range"] {
         padding: 10px;
     }
 
-    #card-list {
+    #card-list, #pending-list {
         max-height: 55vh;
         max-height: 55dvh;
     }
