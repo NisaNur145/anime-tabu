@@ -332,7 +332,7 @@ function runTimer() {
     }, 200);
 }
 
-// Tur biter (süre doldu ya da hedef puana ulaşıldı) -> özet ekranı
+// Tur biter (süre doldu) -> özet ekranı
 function endTurn(timedOut) {
     clearInterval(timerInterval);
     timerInterval = null;
@@ -370,11 +370,8 @@ function handleAnswer(pointType) {
     else if (pointType === -1) { vibrate(VIBRATE_TABOO); playSfx('taboo'); }
     else { vibrate(VIBRATE_PASS); playSfx('pass'); }
 
-    if (targetReached()) {
-        endTurn(false); // Oyun hemen bitmez: önce özet ekranında düzeltme şansı verilir
-    } else {
-        drawNextCard();
-    }
+    // Hedef puana ulaşılsa bile tur süre dolana kadar devam eder (oyunun bitip bitmeyeceğine tur sonunda bakılır)
+    drawNextCard();
 }
 
 // --- TUR ÖZETİ ---
