@@ -8,6 +8,7 @@ const SAVED_TEAMS_KEY = 'anime_tabu_teams';
 const LAST_SETUP_KEY = 'anime_tabu_last_setup';
 
 let selectedTeamCount = 2;
+const chosenCategories = new Set(); // Oyun için seçilen kategoriler (boşsa hepsi)
 let lastTeamInput = null; // En son dokunulan takım kutusu (kayıtlı takım seçilince oraya yazılır)
 
 // --- LOCALSTORAGE YARDIMCILARI (gizli sekme vb. durumlarda hata vermesin) ---
@@ -420,28 +421,46 @@ function refreshCategoryUI() {
         });
     }
 
-    // 2. Takım kurulum ekranındaki kategori seçimi
-    const select = document.getElementById('game-category');
-    if (select) {
-        const previous = select.value;
-        select.innerHTML = '';
+    // 2. Takım kurulum ekranındaki kategori seçimi (birden fazla kategori seçilebilir)
+    const box = document.getElementById('game-category-list');
+    if (box) {
+        // Artık havuzda olmayan kategoriler seçimden düşer
+        [...chosenCategories].forEach(cat => { if (!counts.has(cat)) chosenCategories.delete(cat); });
 
-        const total = (window.globalCards || []).length;
-        const allOption = document.createElement('option');
-        allOption.value = '';
-        allOption.textContent = `Tüm Kategoriler (${total})`;
-        select.appendChild(allOption);
+        const scrollPos = box.scrollTop; // Dokununca liste başa kaymasın
+        box.innerHTML = '';
+        const cards = window.globalCards || [];
 
-        counts.forEach((count, cat) => {
-            const option = document.createElement('option');
-            option.value = cat;
-            option.textContent = `${cat} (${count})`;
-            select.appendChild(option);
+        const addChip = (label, selected, onClick) => {
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'chip chip-toggle' + (selected ? ' selected' : '');
+            chip.textContent = label; // textContent: güvenli
+            chip.addEventListener('click', onClick);
+            box.appendChild(chip);
+        };
+
+        addChip(`Tümü (${cards.length})`, chosenCategories.size === 0, () => {
+            chosenCategories.clear();
+            refreshCategoryUI();
         });
+        counts.forEach((count, cat) => {
+            addChip(`${cat} (${count})`, chosenCategories.has(cat), () => {
+                if (chosenCategories.has(cat)) chosenCategories.delete(cat);
+                else chosenCategories.add(cat);
+                refreshCategoryUI();
+            });
+        });
+        box.scrollTop = scrollPos;
 
-        // Önceki seçim hâlâ varsa koru
-        if ([...select.options].some(opt => opt.value === previous)) {
-            select.value = previous;
+        const summary = document.getElementById('category-summary');
+        if (summary) {
+            const playable = chosenCategories.size === 0
+                ? cards.length
+                : cards.filter(card => chosenCategories.has(card.category || DEFAULT_CATEGORY)).length;
+            summary.textContent = chosenCategories.size === 0
+                ? `Tüm kategoriler: ${playable} kart`
+                : `${chosenCategories.size} kategori seçili: ${playable} kart`;
         }
     }
 }

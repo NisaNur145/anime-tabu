@@ -16,7 +16,7 @@ let turnDuration = 60;
 let passLimit = 3;        // Tur başına pas hakkı (0 = sınırsız)
 let equalTurns = true;    // Hedef puana ulaşılsa da herkes eşit sayıda tur oynasın
 let passesLeft = 3;
-let selectedCategory = ""; // Boş = tüm kategoriler
+let selectedCategories = []; // Seçilen kategoriler (boş = hepsi)
 let turnLog = [];          // Turda oynanan kartlar: { word, points }
 let victoryAudio = null;
 let menuAudio = null;          // Menü müziği (menü ekranlarında döngüyle çalar)
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
         equalTurns = settings.equalTurns !== false;
 
         // Seçilen kategori (boşsa tüm kartlar)
-        selectedCategory = document.getElementById('game-category').value;
+        selectedCategories = [...chosenCategories]; // ui.js'teki seçim
         saveResultToBoard = document.getElementById('save-to-leaderboard').checked;
 
         // Firebase'den veri gelmediyse ya da okunamadıysa başlatma
@@ -228,8 +228,8 @@ function quitGame() {
 // Seçili kategoriye uyan kartlar
 function getPlayableCards() {
     const allCards = window.globalCards || [];
-    if (!selectedCategory) return allCards;
-    return allCards.filter(card => card.category === selectedCategory);
+    if (selectedCategories.length === 0) return allCards;
+    return allCards.filter(card => selectedCategories.includes(card.category));
 }
 
 function loadAndShuffleDeck() {
@@ -237,8 +237,8 @@ function loadAndShuffleDeck() {
 
     // Güvenlik: Kart yoksa uyarı ver ve işlemi durdur
     if (playable.length === 0) {
-        if (selectedCategory) {
-            alert(`"${selectedCategory}" kategorisinde hiç kart yok! Başka bir kategori seç ya da kart ekle.`);
+        if (selectedCategories.length > 0) {
+            alert(`Seçtiğin kategorilerde (${selectedCategories.join(', ')}) hiç kart yok! Başka bir kategori seç ya da kart ekle.`);
             showScreen('team-setup-screen');
         } else {
             alert("Firebase havuzunda hiç kart yok! Lütfen önce kart ekleyin.");

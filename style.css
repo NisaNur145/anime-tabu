@@ -202,6 +202,26 @@ button.chip {
     border-radius: 18px;
 }
 
+/* Oyun öncesi kategori seçimi (birden fazla seçilebilir) */
+.category-chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-height: 200px;
+    overflow-y: auto;
+    margin: 4px 0 2px;
+}
+
+button.chip.chip-toggle {
+    background-color: transparent;
+    border: 2px solid #0f3460;
+}
+
+button.chip.chip-toggle.selected {
+    background-color: #e94560;
+    border-color: #e94560;
+}
+
 /* --- OYUN İÇİ KART TASARIMI --- */
 .playing-card {
     background-color: #f4f4f4; /* Gerçek kart hissi için kirli beyaz */

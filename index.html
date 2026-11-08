@@ -58,10 +58,11 @@
             <div id="saved-teams"></div>
         </div>
 
-        <label for="game-category" class="field-label">Kategori:</label>
-        <select id="game-category">
-            <option value="">Tüm Kategoriler</option>
-        </select>
+        <p class="field-label">Kategori (birden fazla seçebilirsin):</p>
+        <div id="game-category-list" class="category-chips">
+            <!-- Kategori etiketleri JS ile buraya eklenecek -->
+        </div>
+        <p id="category-summary" class="pool-count"></p>
 
         <label class="check-row">
             <input type="checkbox" id="save-to-leaderboard" checked>
