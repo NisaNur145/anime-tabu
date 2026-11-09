@@ -13,7 +13,7 @@ const MUSIC_FOLDER = 'assets/sounds/music/';
 
 const VICTORY_SONGS = [
     // title/artist/source/license'ı doldurursan "Müzik ve Ses Kaynakları" ekranında görünür
-    { file: 'timesup.mp3', start: 33, title: '', artist: '', source: 'pixabay.com', license: 'Pixabay License' }
+    { file: 'timesup.mp3', start: 3, title: '', artist: '', source: 'pixabay.com', license: 'Pixabay License' }
 ];
 
 // --- MENÜ MÜZİĞİ ---

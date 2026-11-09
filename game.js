@@ -3,6 +3,10 @@ let teams = [];            // [{ name, score }] (2-5 takım)
 let activeTeam = 0;        // Sırası gelen takımın dizideki yeri
 let saveResultToBoard = true; // Oyun sonucu liderlik tablosuna yazılsın mı?
 let resultSaved = false;      // Aynı oyun iki kez kaydedilmesin
+let resultPending = false;    // Beraberlikte sonuç, altın tur kararı verilene kadar bekler
+let inGolden = false;         // Altın tur (beraberliği bozma turu) oynanıyor mu?
+let goldenOrder = [];         // Altın turu oynayacak (berabere kalan) takımların sırası
+let goldenPos = 0;            // Altın turda sıradaki takım
 let timeLeft = 60;
 let timerInterval = null;
 let isPaused = false;
@@ -82,6 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
         teams = setup.names.map(name => ({ name: name, score: 0 }));
         activeTeam = 0;
         resultSaved = false;
+        resetGolden();
         saveTeamSetup(setup);
 
         showReadyScreen("Oyun başlıyor!");
@@ -127,22 +132,58 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Rövanş ve Ana Sayfa
     document.getElementById('btn-rematch').addEventListener('click', () => {
+        finalizeTieResult(); // Beraberlikte bekleyen sonuç varsa şimdi kaydet
         stopMusic();
         teams.forEach(team => team.score = 0);
         activeTeam = 0;
         resultSaved = false;
+        resetGolden();
         if (!loadAndShuffleDeck()) return;
         showReadyScreen("Rövanş başlıyor!");
     });
 
     document.querySelectorAll('.btn-home').forEach(btn => {
         btn.addEventListener('click', () => {
+            finalizeTieResult(); // Beraberlikte bekleyen sonuç varsa şimdi kaydet
             stopMusic();
             clearInterval(timerInterval);
             releaseWakeLock();
         });
     });
+
+    // Beraberlikte "Altın Tur": sadece berabere kalan takımlar bir tur daha oynar
+    document.getElementById('btn-golden').addEventListener('click', startGoldenRound);
 });
+
+function resetGolden() {
+    inGolden = false;
+    goldenOrder = [];
+    goldenPos = 0;
+    resultPending = false;
+}
+
+// Beraberlikle biten oyunun sonucu (altın tur oynanmadıysa) çıkışta liderlik tablosuna yazılır
+function finalizeTieResult() {
+    if (resultPending) {
+        resultPending = false;
+        saveResultOnce();
+    }
+}
+
+function startGoldenRound() {
+    const topScore = Math.max(...(inGolden ? goldenOrder.map(i => teams[i]) : teams).map(team => team.score));
+    const tiedIndexes = teams
+        .map((team, index) => index)
+        .filter(index => teams[index].score === topScore && (!inGolden || goldenOrder.includes(index)));
+    if (tiedIndexes.length < 2) return;
+
+    stopMusic();
+    inGolden = true;
+    goldenOrder = tiedIndexes;
+    goldenPos = 0;
+    activeTeam = goldenOrder[0];
+    showReadyScreen('Altın tur! Berabere kalan takımlar bir tur daha oynuyor. Aynı ayarlarla devam, kartlar kaldığı yerden gelir.');
+}
 
 // --- YARDIMCILAR ---
 function activeTeamName() {
@@ -221,6 +262,7 @@ function quitGame() {
     hidePauseOverlay();
     releaseWakeLock();
     stopMusic();
+    resetGolden();
     showScreen('main-menu');
 }
 
@@ -382,6 +424,7 @@ function targetReached() {
 // Oyun şimdi bitmeli mi? Hedefe ulaşıldıysa ve (eşit tur kapalıysa ya da son takımın turuysa) evet.
 // Eşit tur açıkken tur dönüşü bitmeden oyun kesilmez, böylece her takım aynı sayıda tur oynar.
 function shouldEndGame() {
+    if (inGolden) return goldenPos === goldenOrder.length - 1; // Altın turda sadece berabere kalanlar sırayla oynar
     if (!targetReached()) return false;
     if (!equalTurns) return true;
     return activeTeam === teams.length - 1;
@@ -450,6 +493,12 @@ function finishSummary() {
         endGame();
         return;
     }
+    if (inGolden) {
+        goldenPos++;
+        activeTeam = goldenOrder[goldenPos];
+        showReadyScreen("Altın tur: sıradaki takım hazırlansın!");
+        return;
+    }
     const reachedAlready = targetReached(); // Hedefe ulaşıldı ama tur dönüşü bitmedi
     activeTeam = (activeTeam + 1) % teams.length;
     showReadyScreen(reachedAlready
@@ -464,16 +513,30 @@ function endGame() {
     releaseWakeLock();
     showScreen('victory-screen');
 
-    // En yüksek puanlı takım(lar) kazanır; eşitlik varsa beraberlik
-    const topScore = Math.max(...teams.map(team => team.score));
-    const winners = teams.filter(team => team.score === topScore);
-    const winnerText = winners.length === 1
-        ? `Kazanan: ${winners[0].name}!`
+    // En yüksek puanlı takım(lar) kazanır; eşitlik varsa beraberlik.
+    // Altın turdan sonra sadece altın turu oynayan takımlar arasında bakılır.
+    const contenders = inGolden ? goldenOrder.map(index => teams[index]) : teams;
+    const topScore = Math.max(...contenders.map(team => team.score));
+    const winners = contenders.filter(team => team.score === topScore);
+    const isTie = winners.length > 1;
+    const winnerText = !isTie
+        ? `${inGolden ? 'Altın tur kazananı' : 'Kazanan'}: ${winners[0].name}!`
         : `Beraberlik: ${winners.map(team => team.name).join(', ')}!`;
     document.getElementById('winner-text').innerText = winnerText;
 
     renderFinalStandings(teams);
-    saveResultOnce();
+
+    // Beraberlikte altın tur önerilir; karar verilene kadar sonuç kaydedilmez
+    const goldenBtn = document.getElementById('btn-golden');
+    goldenBtn.style.display = isTie ? 'block' : 'none';
+    if (isTie) {
+        resultPending = true;
+        document.getElementById('victory-save-note').textContent =
+            'Beraberliği bozmak için altın tur oynayabilirsin. Oynamak istemezsen oyunu bitirebilirsin, sonuç beraberlik olarak kaydedilir.';
+    } else {
+        resultPending = false;
+        saveResultOnce();
+    }
 
     vibrate(VIBRATE_VICTORY);
     playVictoryMusic();
